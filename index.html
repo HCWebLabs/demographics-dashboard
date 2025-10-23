@@ -5,23 +5,73 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>HC Demographics Dashboard — ACS 5-Year</title>
 
-  <!-- Fonts & Icons -->
+  <!-- Icons + fonts -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- App styles -->
-  <link rel="stylesheet" href="./styles.css">
-
-  <!-- Chart.js FIRST (no defer, so window.Chart exists before app.js runs) -->
+  <!-- Chart.js FIRST (no defer) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+
+  <style>
+    /* ========= styles (same as before, trimmed a hair) ========= */
+    #hc-demog[data-scope="acs"], #hc-demog[data-scope="acs"] * { box-sizing: border-box }
+    #hc-demog[data-scope="acs"]{
+      --ink-0:#f6f7fb; --ink-1:#e6e8ef; --ink-2:#c8ccda; --ink-3:#9aa3b8; --ink-9:#0f1220;
+      --bg:#0b0f1a; --card:#11162aee; --accent:#8ae6ff; --accent-2:#b18bff; --accent-3:#ff8dcf;
+      --ok:#1fc77e; --warn:#ffb454; --err:#ff6b6b; --ring:#2b3253; --line:#1f2744; --shadow:0 10px 30px rgba(0,0,0,.35);
+      color:var(--ink-0); background: radial-gradient(1200px 600px at 10% -10%, #1b2040 0%, transparent 60%), var(--bg);
+      font-family: Mulish, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      padding: clamp(16px,3vw,28px);
+    }
+    .wrap{ max-width:1200px; margin:0 auto; display:grid; gap:16px }
+    .head{ display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      padding:14px 16px; background:linear-gradient(180deg,#171d36,#11162a); border:1px solid var(--line);
+      border-radius:16px; box-shadow:var(--shadow) }
+    .title{ display:flex; align-items:center; gap:12px }
+    h1{ margin:0; font-size: clamp(18px,2vw,22px); letter-spacing:.2px; font-weight:700 }
+    .badge{ font-size:12px; padding:4px 8px; border:1px solid var(--ring); border-radius:999px; color:var(--ink-3) }
+    .controls{ display:grid; gap:12px; grid-template-columns:1fr; padding:12px; border:1px solid var(--line);
+      background:#0e1326; border-radius:16px; box-shadow:var(--shadow) }
+    @media (min-width: 860px){ .controls{ grid-template-columns: 1fr 1fr 1.1fr 1fr 1fr .9fr 1.1fr } }
+    .ctl{ display:flex; flex-direction:column; gap:6px }
+    label{ font-size:12px; color:var(--ink-3) }
+    input, select, button{ font:inherit; color:var(--ink-0); background:#151b33; border:1px solid var(--ring);
+      border-radius:10px; padding:9px 10px; outline:none; transition: box-shadow .2s ease, border-color .2s ease }
+    input:focus, select:focus{ border-color:#3a4a87; box-shadow:0 0 0 3px rgba(58,74,135,.25) }
+    .btn{ display:inline-flex; align-items:center; gap:8px; justify-content:center; cursor:pointer; user-select:none }
+    .btn.primary{ background:linear-gradient(90deg,#24c8ff33,#b18bff33); border-color:#3b3f6a }
+    .btn.ghost{ background:transparent }
+    .btn[data-state="busy"]{ opacity:.7; pointer-events:none }
+
+    .kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px }
+    @media (min-width: 880px){ .kpis{ grid-template-columns:repeat(4,1fr) } }
+    .kpi{ background:linear-gradient(180deg,#161c36,#10162a); border:1px solid var(--line); border-radius:16px; padding:12px 14px; box-shadow:var(--shadow) }
+    .kpi .label{ font-size:12px; color:var(--ink-3) }
+    .kpi .value{ font-size: clamp(18px,3.5vw,26px); font-weight:700; margin-top:6px }
+    .kpi .delta{ font-size:12px; margin-top:6px; color:var(--ink-3) }
+
+    .grid{ display:grid; gap:12px; grid-template-columns:1fr; grid-auto-rows:minmax(260px,auto) }
+    @media (min-width: 960px){ .grid{ grid-template-columns:1.2fr 1fr } }
+    .card{ background:linear-gradient(180deg,#161b34,#0f1429); border:1px solid var(--line); border-radius:16px; padding:12px; box-shadow:var(--shadow);
+      display:flex; flex-direction:column; min-height:260px }
+    .card h3{ margin:2px 0 8px; font-size:14px; color:var(--ink-2); letter-spacing:.15px }
+    .toolbar{ display:flex; gap:8px; margin-left:auto }
+    canvas{ width:100%; height:100% }
+
+    .table{ overflow:auto; border:1px solid var(--line); border-radius:12px; background:#0f152c }
+    table{ width:100%; border-collapse:collapse; min-width:700px }
+    th, td{ padding:10px; border-bottom:1px solid #161d3a; text-align:left; font-size:13px }
+    th{ color:var(--ink-2); position:sticky; top:0; background:#0f152c; z-index:1 }
+
+    .foot{ display:flex; gap:10px; align-items:center; justify-content:space-between; color:var(--ink-3);
+      font-size:12px; padding:8px 4px }
+    .pill{ border:1px solid var(--ring); padding:3px 8px; border-radius:999px }
+  </style>
 </head>
 <body>
-  <!-- =========================
-  HC Web Labs — Population & Demographics Dashboard (U.S. Census ACS 5-Year)
-  ========================= -->
   <section id="hc-demog" data-scope="acs" aria-label="Population & Demographics Dashboard">
     <div class="wrap">
       <div class="head">
@@ -38,40 +88,21 @@
       </div>
 
       <div class="controls" role="group" aria-label="Filters">
-        <div class="ctl">
-          <label for="year">ACS Year</label>
-          <select id="year"></select>
+        <div class="ctl"><label for="year">ACS Year</label><select id="year"></select></div>
+        <div class="ctl"><label for="geoLevel">Geography</label>
+          <select id="geoLevel"><option value="state" selected>States</option><option value="county">Counties in State</option></select>
         </div>
-        <div class="ctl">
-          <label for="geoLevel">Geography</label>
-          <select id="geoLevel">
-            <option value="state" selected>States</option>
-            <option value="county">Counties in State</option>
-          </select>
-        </div>
-        <div class="ctl" id="stateCtl" style="display:none">
-          <label for="stateSel">State (for counties)</label>
-          <select id="stateSel"></select>
-        </div>
-        <div class="ctl">
-          <label for="metric">Metric</label>
+        <div class="ctl" id="stateCtl" style="display:none"><label for="stateSel">State (for counties)</label><select id="stateSel"></select></div>
+        <div class="ctl"><label for="metric">Metric</label>
           <select id="metric">
             <option value="B01003_001E" data-label="Total population" selected>Total population</option>
             <option value="B19013_001E" data-label="Median household income">Median household income (USD)</option>
             <option value="B01002_001E" data-label="Median age">Median age (years)</option>
           </select>
         </div>
-        <div class="ctl">
-          <label for="topN">Top N: <span id="topNVal">20</span></label>
-          <input id="topN" type="range" min="5" max="50" step="5" value="20" />
-        </div>
-        <div class="ctl" style="align-self:end">
-          <button class="btn primary" id="refresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
-        </div>
-        <div class="ctl">
-          <label for="apikey">Census API key (optional)</label>
-          <input id="apikey" type="text" placeholder="Paste key (optional)" />
-        </div>
+        <div class="ctl"><label for="topN">Top N: <span id="topNVal">20</span></label><input id="topN" type="range" min="5" max="50" step="5" value="20" /></div>
+        <div class="ctl" style="align-self:end"><button class="btn primary" id="refresh"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
+        <div class="ctl"><label for="apikey">Census API key (optional)</label><input id="apikey" type="text" placeholder="Paste key (optional)" /></div>
       </div>
 
       <div class="kpis" id="kpis">
@@ -85,45 +116,28 @@
         <div class="card">
           <div style="display:flex; align-items:center; gap:8px;">
             <h3 id="barTitle">Top by Metric</h3>
-            <div class="toolbar">
-              <button class="btn ghost" data-save="bar"><i class="fa-regular fa-image"></i> Save PNG</button>
-            </div>
+            <div class="toolbar"><button class="btn ghost" data-save="bar"><i class="fa-regular fa-image"></i> Save PNG</button></div>
           </div>
           <canvas id="chartBars" role="img" aria-label="Top by selected metric"></canvas>
         </div>
-
         <div class="card">
           <div style="display:flex; align-items:center; gap:8px;">
             <h3 id="distTitle">Distribution</h3>
-            <div class="toolbar">
-              <button class="btn ghost" data-save="hist"><i class="fa-regular fa-image"></i> Save PNG</button>
-            </div>
+            <div class="toolbar"><button class="btn ghost" data-save="hist"><i class="fa-regular fa-image"></i> Save PNG</button></div>
           </div>
           <canvas id="chartHist" role="img" aria-label="Distribution histogram"></canvas>
         </div>
-
         <div class="card table" style="grid-column:1 / -1;">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px 0;">
             <h3 style="margin:0" id="tableTitle">Table</h3>
-            <div class="toolbar">
-              <button class="btn ghost" id="copySnapshot"><i class="fa-regular fa-clipboard"></i> Copy Snapshot</button>
-            </div>
+            <div class="toolbar"><button class="btn ghost" id="copySnapshot"><i class="fa-regular fa-clipboard"></i> Copy Snapshot</button></div>
           </div>
           <div>
             <table aria-label="ACS results">
-              <thead>
-                <tr>
-                  <th>Geography</th>
-                  <th>Population</th>
-                  <th>Median HH Income</th>
-                  <th>Median Age</th>
-                  <th>State FIPS</th>
-                  <th id="countyCol" style="display:none">County FIPS</th>
-                </tr>
-              </thead>
-              <tbody id="rows">
-                <tr><td colspan="6" style="text-align:center; color:var(--ink-3)">No data yet.</td></tr>
-              </tbody>
+              <thead><tr>
+                <th>Geography</th><th>Population</th><th>Median HH Income</th><th>Median Age</th><th>State FIPS</th>
+                <th id="countyCol" style="display:none">County FIPS</th></tr></thead>
+              <tbody id="rows"><tr><td colspan="6" style="text-align:center; color:var(--ink-3)">No data yet.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -131,15 +145,213 @@
 
       <div class="foot">
         <div class="status">
-          <span class="pill" id="statusPill"><i class="fa-solid fa-circle-notch fa-spin"></i> Waiting</span>
-          <span id="statusMsg">Choose settings and click Refresh.</span>
+          <span class="pill" id="statusPill"><i class="fa-solid fa-circle-notch fa-spin"></i> Boot</span>
+          <span id="statusMsg">Initializing…</span>
         </div>
-        <div><small>Source: U.S. Census Bureau, American Community Survey (5-Year). Light use works without a key.</small></div>
+        <div><small>Source: U.S. Census Bureau, American Community Survey (5-Year).</small></div>
       </div>
     </div>
   </section>
 
-  <!-- App script (runs after Chart.js is available) -->
-  <script src="./app.js" defer></script>
+  <script>
+    // ——— robust init: wait for DOM AND Chart.js ———
+    (function init(cb){
+      const ready = () => document.readyState === 'interactive' || document.readyState === 'complete';
+      function go(){ try{ if(window.Chart && ready()){ cb(); } else { setTimeout(go, 40); } }catch(e){ console.error(e); } }
+      go();
+    })(main);
+
+    function main(){
+      const scope = document.querySelector('#hc-demog[data-scope="acs"]');
+      const $ = (sel) => scope.querySelector(sel);
+
+      // Controls
+      const yearEl = $('#year'), geoEl = $('#geoLevel'), stateCtl = $('#stateCtl'), stateSel = $('#stateSel');
+      const metricEl = $('#metric'), topNEl = $('#topN'), topNVal = $('#topNVal'), apiKeyEl = $('#apikey');
+      const refreshBtn = $('#refresh'), exportCSVBtn = $('#exportCSV'), statusPill = $('#statusPill'), statusMsg = $('#statusMsg'), countyCol = $('#countyCol');
+
+      // KPIs
+      const kpiAreas = $('#kpiAreas'), kpiPop = $('#kpiPop'), kpiInc = $('#kpiInc'), kpiAge = $('#kpiAge');
+
+      // Charts
+      let barChart, histChart;
+
+      const fmtInt = new Intl.NumberFormat();
+      const fmtUSD = new Intl.NumberFormat(undefined,{ style:'currency', currency:'USD', maximumFractionDigits:0 });
+      const fmt1 = (x) => (x==null || isNaN(x) ? '—' : Number(x).toFixed(1));
+
+      // Years (2015..2023)
+      const YEARS = Array.from({length:9}, (_,i)=>2015+i);
+      yearEl.innerHTML = YEARS.map(y=>`<option value="${y}" ${y===2023?'selected':''}>${y}</option>`).join('');
+
+      // State persistence
+      const LS='hcAcsState.v1';
+      function saveState(){ localStorage.setItem(LS, JSON.stringify({
+        year:+yearEl.value, geo:geoEl.value, state:stateSel.value, metric:metricEl.value, topN:+topNEl.value, key:apiKeyEl.value.trim()
+      }));}
+      function restoreState(){
+        try{ const s = JSON.parse(localStorage.getItem(LS)||'{}');
+          if(s.year) yearEl.value = s.year; if(s.geo) geoEl.value = s.geo; if(s.metric) metricEl.value = s.metric;
+          if(s.topN){ topNEl.value = s.topN; topNVal.textContent = s.topN; } if(s.key) apiKeyEl.value = s.key; return s;
+        }catch(e){ return {}; }
+      }
+
+      const ACS_BASE = (year) => `https://api.census.gov/data/${year}/acs/acs5`;
+
+      async function fetchACS(year, metric, geo, stateFips, key){
+        const vars = ['NAME','B01003_001E','B19013_001E','B01002_001E'];
+        const qs = new URLSearchParams({ get: vars.join(',') });
+        if(geo==='state'){ qs.append('for','state:*'); } else { qs.append('for','county:*'); qs.append('in',`state:${stateFips}`); }
+        if(key) qs.append('key', key);
+        const url = `${ACS_BASE(year)}?${qs.toString()}`;
+        const res = await fetch(url, { cache:'no-store' });
+        if(!res.ok) throw new Error(`ACS ${res.status}`);
+        const json = await res.json();
+        const headers = json[0];
+        const rows = json.slice(1).map(r => Object.fromEntries(headers.map((h,i)=>[h,r[i]])));
+        return rows.map(o => ({ name:o.NAME, pop:num(o.B01003_001E), income:num(o.B19013_001E), age:num(o.B01002_001E), state:o.state, county:o.county??null }));
+      }
+      async function fetchStatesList(year, key){
+        const qs = new URLSearchParams({ get:'NAME', for:'state:*' }); if(key) qs.append('key',key);
+        const res = await fetch(`${ACS_BASE(year)}?${qs.toString()}`, { cache:'no-store' });
+        const json = await res.json(); const headers=json[0];
+        return json.slice(1).map(r => Object.fromEntries(headers.map((h,i)=>[h,r[i]]))).map(o=>({ fips:o.state, name:o.NAME }));
+      }
+      const num = (v)=>{ const n=Number(v); return Number.isFinite(n)?n:null; };
+
+      // Wiring
+      topNEl.addEventListener('input', ()=> topNVal.textContent = topNEl.value);
+      [yearEl, metricEl, geoEl, stateSel].forEach(el=>el.addEventListener('change', saveState));
+      apiKeyEl.addEventListener('change', saveState);
+      geoEl.addEventListener('change', ()=>{
+        const county = geoEl.value==='county';
+        stateCtl.style.display = county?'':'none';
+        countyCol.style.display = county?'':'none';
+      });
+      $('#copySnapshot').addEventListener('click', async ()=>{
+        const tsv = Array.from($('#rows').querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(td=>td.textContent.trim()).join('\t')).join('\n');
+        try{ await navigator.clipboard.writeText(tsv); toast('Snapshot copied.'); } catch{ toast('Copy failed.'); }
+      });
+      exportCSVBtn.addEventListener('click', ()=>{
+        if(!CURRENT.length) return toast('Nothing to export.');
+        const csv = [
+          ['Geography','Population','Median_HH_Income','Median_Age','StateFIPS','CountyFIPS'],
+          ...CURRENT.map(r=>[r.name,r.pop,r.income,r.age,r.state,r.county??''])
+        ].map(a=>a.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download=`acs_${yearEl.value}_${geoEl.value}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+      function toast(msg){ statusMsg.textContent = msg; }
+
+      function destroyCharts(){ for(const c of [barChart,histChart]){ if(c) c.destroy(); } }
+      function renderCharts(list, metricKey, metricLabel){
+        destroyCharts();
+        const topN = +topNEl.value;
+        const sorted = [...list].filter(r=>Number.isFinite(r[metricKey])).sort((a,b)=>b[metricKey]-a[metricKey]).slice(0,topN);
+        const labels = sorted.map(r=>r.name), data = sorted.map(r=>r[metricKey]);
+        $('#barTitle').textContent = `Top ${topN} by ${metricLabel}`;
+        barChart = new Chart($('#chartBars').getContext('2d'), {
+          type:'bar', data:{ labels, datasets:[{ label:metricLabel, data }]},
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } },
+            scales:{ x:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'#1c2342' } }, y:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'#1c2342' } } } }
+        });
+        $('#distTitle').textContent = `${metricLabel} — Distribution`;
+        const values = list.map(r=>r[metricKey]).filter(Number.isFinite);
+        if(values.length){
+          const min=Math.min(...values), max=Math.max(...values); const bins=10, step=(max-min)/bins||1;
+          const edges=Array.from({length:bins},(_,i)=>min+i*step), counts=new Array(bins).fill(0);
+          values.forEach(v=>{ let idx=Math.floor((v-min)/step); if(idx>=bins) idx=bins-1; if(idx<0) idx=0; counts[idx]++; });
+          const labelsH = edges.map((e,i)=>{ const lo=edges[i], hi=i===bins-1?max:edges[i+1];
+            return metricKey==='income' ? `${fmtUSD.format(lo)}–${fmtUSD.format(hi)}` :
+                   metricKey==='pop' ? `${fmtInt.format(lo)}–${fmtInt.format(hi)}` :
+                   `${lo.toFixed(1)}–${hi.toFixed(1)}`; });
+          histChart = new Chart($('#chartHist').getContext('2d'), {
+            type:'bar', data:{ labels:labelsH, datasets:[{ label:'Count of areas', data:counts }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+              scales:{ x:{ ticks:{ color:'#cbd5e1', autoSkip:false, maxRotation:45, minRotation:0 }, grid:{ color:'#1c2342' } },
+                       y:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'#1c2342' } } } }
+          });
+        }
+      }
+      function renderTable(list){
+        const rows = list.map(r=>`
+          <tr>
+            <td>${r.name}</td>
+            <td>${Number.isFinite(r.pop)?fmtInt.format(r.pop):'—'}</td>
+            <td>${Number.isFinite(r.income)?fmtUSD.format(r.income):'—'}</td>
+            <td>${Number.isFinite(r.age)?fmt1(r.age):'—'}</td>
+            <td>${r.state||''}</td>
+            <td style="${geoEl.value==='county'?'':'display:none'}">${r.county??''}</td>
+          </tr>`).join('');
+        $('#rows').innerHTML = rows || `<tr><td colspan="6" style="text-align:center; color:var(--ink-3)">No data.</td></tr>`;
+      }
+      function renderKpis(list){
+        kpiAreas.textContent = fmtInt.format(list.length);
+        $('#kpiAreasNote').textContent = geoEl.value==='state' ? 'States + DC/territories' : 'Counties in selected state';
+        const popSum = list.map(r=>r.pop).filter(Number.isFinite).reduce((a,b)=>a+b,0);
+        kpiPop.textContent = fmtInt.format(popSum); $('#kpiPopNote').textContent = 'Sum of total population';
+        const incomes=list.map(r=>r.income).filter(Number.isFinite), ages=list.map(r=>r.age).filter(Number.isFinite);
+        const avg = a => a.length ? (a.reduce((x,y)=>x+y,0)/a.length) : null;
+        const incAvg=avg(incomes), ageAvg=avg(ages);
+        kpiInc.textContent = incAvg?fmtUSD.format(incAvg):'—'; $('#kpiIncNote').textContent='Simple average of medians';
+        kpiAge.textContent = ageAvg?fmt1(ageAvg):'—'; $('#kpiAgeNote').textContent='Simple average of medians';
+      }
+      function wireSavePng(){
+        scope.querySelectorAll('[data-save]').forEach(btn=>{
+          btn.onclick = ()=>{ const target=btn.getAttribute('data-save'); const map={bar:barChart,hist:histChart}; const chart=map[target];
+            if(!chart) return; const url=chart.toBase64Image(); const a=document.createElement('a'); a.href=url; a.download=`demographics-${target}.png`; document.body.appendChild(a); a.click(); a.remove(); };
+        });
+      }
+      async function populateStates(year, key){
+        stateSel.innerHTML = `<option value="">Loading…</option>`;
+        try{
+          const list = await fetchStatesList(year, key);
+          stateSel.innerHTML = list.map(s=>`<option value="${s.fips}">${s.name}</option>`).join('');
+          const saved = restoreState();
+          if(saved?.state){ stateSel.value = saved.state; }
+          else { const tn = list.find(s=>s.fips==='47'); if(tn) stateSel.value='47'; }
+        }catch{ stateSel.innerHTML = `<option value="">(failed)</option>`; }
+      }
+
+      let CURRENT=[];
+      async function load(){
+        try{
+          refreshBtn.dataset.state='busy';
+          statusPill.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Fetch`;
+          statusMsg.textContent = 'Fetching ACS…';
+          const year=+yearEl.value, metricVar=metricEl.value, metricLabel=metricEl.options[metricEl.selectedIndex].dataset.label, geo=geoEl.value, key=apiKeyEl.value.trim();
+          if(geo==='county' && !stateSel.value){ await populateStates(year, key); }
+          const data = await fetchACS(year, metricVar, geo, stateSel.value || '47', key);
+          CURRENT = data;
+          renderKpis(CURRENT);
+          const chartKey = metricVar==='B01003_001E'?'pop':(metricVar==='B19013_001E'?'income':'age');
+          renderCharts(CURRENT, chartKey, metricLabel);
+          renderTable(CURRENT);
+          $('#tableTitle').textContent = (geo==='state' ? 'States' : `Counties in ${stateSel.options[stateSel.selectedIndex]?.text||''}`) + ` — ${year}`;
+          statusPill.innerHTML = `<i class="fa-solid fa-signal"></i> Ready`;
+          statusMsg.textContent = `Loaded ${CURRENT.length} ${geo==='state'?'states/areas':'counties'}.`;
+          wireSavePng(); saveState();
+        }catch(e){
+          console.error(e);
+          statusPill.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:var(--warn)"></i> Error`;
+          statusMsg.textContent = e?.message || 'Unknown error';
+        }finally{
+          refreshBtn.dataset.state='';
+        }
+      }
+
+      // First-time UI setup
+      const restored = restoreState();
+      topNVal.textContent = topNEl.value;
+      const countyMode = geoEl.value==='county'; stateCtl.style.display = countyMode?'':'none'; countyCol.style.display = countyMode?'':'none';
+
+      // Preload states (non-blocking) then auto-load once
+      populateStates(+yearEl.value, apiKeyEl.value.trim()).finally(()=>{});
+      refreshBtn.addEventListener('click', load);
+      [metricEl, topNEl, geoEl, yearEl, stateSel].forEach(el => el.addEventListener('change', ()=>{ if(CURRENT.length){ const metricVar=metricEl.value; const metricLabel=metricEl.options[metricEl.selectedIndex].dataset.label; const chartKey=metricVar==='B01003_001E'?'pop':(metricVar==='B19013_001E'?'income':'age'); renderKpis(CURRENT); renderCharts(CURRENT, chartKey, metricLabel); renderTable(CURRENT); } }));
+      // Auto-load
+      load();
+    }
+  </script>
 </body>
 </html>
